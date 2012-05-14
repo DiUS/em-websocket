@@ -129,22 +129,18 @@ module EventMachine
         close_connection_after_writing
       end
 
-      def send(data)
-        # If we're using Ruby 1.9, be pedantic about encodings
-        if data.respond_to?(:force_encoding)
-          # Also accept ascii only data in other encodings for convenience
+      def send(data_type, data)
+        if data_type == :binary
+          data.force_encoding("ASCII-8BIT")
+        else
           unless (data.encoding == Encoding.find("UTF-8") && data.valid_encoding?) || data.ascii_only?
             raise WebSocketError, "Data sent to WebSocket must be valid UTF-8 but was #{data.encoding} (valid: #{data.valid_encoding?})"
           end
-          # This labels the encoding as binary so that it can be combined with
-          # the BINARY framing
           data.force_encoding("BINARY")
-        else
-          # TODO: Check that data is valid UTF-8
         end
 
         if @handler
-          @handler.send_text_frame(data)
+          @handler.send_frame(data_type, data)
         else
           raise WebSocketError, "Cannot send data before onopen callback"
         end
